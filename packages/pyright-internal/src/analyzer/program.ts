@@ -41,6 +41,7 @@ import { convertPositionToOffset, convertRangeToTextRange } from '../common/posi
 import { computeCompletionSimilarity } from '../common/stringUtils';
 import { DocumentRange, doesRangeContain, doRangesIntersect, Position, Range } from '../common/textRange';
 import { Duration, timingStats } from '../common/timing';
+import { ApiDocsEntry, ApiDocsResponse } from '../apidocsProtocol';
 import {
     AutoImporter,
     AutoImportResult,
@@ -54,25 +55,29 @@ import { IndexOptions, IndexResults, WorkspaceSymbolCallback } from '../language
 import { HoverResults } from '../languageService/hoverProvider';
 import { ReferenceCallback, ReferencesResult } from '../languageService/referencesProvider';
 import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
+import { ParameterCategory, ParseNodeType } from '../parser/parseNodes';
 import { ParseResults } from '../parser/parser';
 import { ImportLookupResult } from './analyzerFileInfo';
 import * as AnalyzerNodeInfo from './analyzerNodeInfo';
 import { CircularDependency } from './circularDependency';
-import { ImportResolver } from './importResolver';
+import { AliasDeclaration, DeclarationType, VariableDeclaration } from './declaration';
+import { ImportedModuleDescriptor, ImportResolver } from './importResolver';
 import { ImportResult, ImportType } from './importResult';
-import { findNodeByOffset, getDocString } from './parseTreeUtils';
+import { ModuleInfo } from './packageTypeReport';
+import { findNodeByOffset, getDocString, printExpression, PrintExpressionFlags } from './parseTreeUtils';
 import { Scope } from './scope';
 import { getScopeForNode } from './scopeUtils';
 import { SourceFile } from './sourceFile';
 import { SourceMapper } from './sourceMapper';
-import { Symbol } from './symbol';
+import { Symbol, SymbolTable } from './symbol';
 import { isPrivateOrProtectedName } from './symbolNameUtils';
 import { createTracePrinter } from './tracePrinter';
 import { TypeEvaluator } from './typeEvaluatorTypes';
 import { createTypeEvaluatorWithTracker } from './typeEvaluatorWithTracker';
 import { PrintTypeFlags } from './typePrinter';
-import { Type } from './types';
+import { ClassType, FunctionType, isClass, isFunction, isModule, isOverloadedFunction, Type } from './types';
 import { TypeStubWriter } from './typeStubWriter';
+import { convertDocStringToMarkdown, convertDocStringToPlainText } from './docStringConversion';
 
 const _maxImportDepth = 256;
 
@@ -1781,6 +1786,154 @@ export class Program {
         this._bindFile(sourceFileInfo);
 
         return sourceFileInfo.sourceFile.performQuickAction(command, args, token);
+    }
+
+    getApiDocs(modules: string[], documentationFormat: MarkupKind[]): ApiDocsResponse {
+        const internalDocStringConversion: (docString: string) => string = [
+            ...documentationFormat,
+            MarkupKind.PlainText,
+        ]
+            .map((markupKind) => {
+                switch (markupKind) {
+                    case MarkupKind.Markdown:
+                        return convertDocStringToMarkdown;
+                    case MarkupKind.PlainText:
+                        return convertDocStringToPlainText;
+                    default:
+                        return undefined;
+                }
+            })
+            .filter(Boolean)[0]!;
+        const docStringConversion = (docString: string | undefined) =>
+            docString ? internalDocStringConversion(docString) : undefined;
+
+        const result: ApiDocsResponse = Object.create(null);
+        for (const moduleName of modules) {
+            const moduleDescriptor: ImportedModuleDescriptor = {
+                leadingDots: 0,
+                nameParts: moduleName.split('.'),
+                importedSymbols: [],
+            };
+            const importResult = this._importResolver.resolveImport(
+                '',
+                this._configOptions.findExecEnvironment('.'),
+                moduleDescriptor
+            );
+            if (importResult.isImportFound) {
+                const modulePath = importResult.resolvedPaths[importResult.resolvedPaths.length - 1];
+                this.addTrackedFiles([modulePath], /* isThirdPartyImport */ true, /* isInPyTypedPackage */ false);
+                const sourceFile = this.getBoundSourceFile(modulePath);
+                if (sourceFile) {
+                    const parseTree = sourceFile.getParseResults()!.parseTree;
+                    const moduleResult: ApiDocsEntry = {
+                        id: moduleName,
+                        name: moduleName,
+                        kind: 'module',
+                        fullName: moduleName,
+                        docString: docStringConversion(getDocString(parseTree.statements)),
+                        children: [],
+                    };
+                    result[moduleName] = moduleResult;
+                    const moduleScope = getScopeForNode(parseTree)!;
+                    const recurseSymbolTables = (target: any[], parents: string[], table: SymbolTable) => {
+                        table.forEach((symbol, name) => {
+                            // There's every chance this is imperfect. It's not clear-cut what counts
+                            // as public API. This is a good-enough implementation for our purposes.
+                            if (!symbol.isExternallyHidden() && !symbol.isPrivateMember()) {
+                                const type = this.getTypeForSymbol(symbol);
+                                const decls = symbol.getDeclarations();
+                                const isDeclarationType = (type: DeclarationType) => decls.some((d) => d.type === type);
+                                if (isDeclarationType(DeclarationType.Class) && isClass(type)) {
+                                    target.push({
+                                        id: symbol.id.toString(),
+                                        name,
+                                        children: [],
+                                        docString: docStringConversion(type.details.docString),
+                                        fullName: type.details.fullName,
+                                        kind: 'class',
+                                        baseClasses: type.details.baseClasses
+                                            .map((baseClass) => ({
+                                                name: (baseClass as ClassType).details.name,
+                                                fullName: (baseClass as ClassType).details.fullName,
+                                            }))
+                                            .filter((t) => t.fullName !== 'builtins.object'),
+                                    });
+                                    recurseSymbolTables(
+                                        target[target.length - 1].children,
+                                        [...parents, name],
+                                        type.details.fields
+                                    );
+                                } else if (isDeclarationType(DeclarationType.Function) && isFunction(type)) {
+                                    target.push({
+                                        id: symbol.id.toString(),
+                                        name,
+                                        docString: docStringConversion(type.details.docString),
+                                        fullName: type.details.fullName,
+                                        kind: 'function',
+                                        params: this.apiDocsParamsInfo(type),
+                                    });
+                                } else if (isDeclarationType(DeclarationType.Function) && isOverloadedFunction(type)) {
+                                    let suffix = 1;
+                                    for (const overload of type.overloads) {
+                                        target.push({
+                                            id: `${symbol.id}-${suffix++}`,
+                                            name,
+                                            docString: docStringConversion(overload.details.docString),
+                                            fullName: overload.details.fullName,
+                                            kind: 'function',
+                                            params: this.apiDocsParamsInfo(overload),
+                                        });
+                                    }
+                                } else if (isDeclarationType(DeclarationType.Variable)) {
+                                    const variable = decls.find(
+                                        (x) => x.type === DeclarationType.Variable
+                                    ) as VariableDeclaration;
+                                    target.push({
+                                        id: symbol.id.toString(),
+                                        name,
+                                        fullName: [...parents, name].join('.'),
+                                        kind: 'variable',
+                                        docString: docStringConversion(variable.docString),
+                                    });
+                                } else if (isDeclarationType(DeclarationType.Alias) && isModule(type)) {
+                                    target.push({
+                                        id: symbol.id.toString(),
+                                        name,
+                                        children: [],
+                                        docString: docStringConversion(type.docString),
+                                        fullName: type.moduleName,
+                                        kind: 'module',
+                                    });
+                                    recurseSymbolTables(
+                                        target[target.length - 1].children,
+                                        [...parents, name],
+                                        type.fields
+                                    );
+                                }
+                            }
+                        });
+                    };
+                    recurseSymbolTables(moduleResult.children!, [moduleName], moduleScope.symbolTable);
+                }
+            }
+        }
+        this._removeUnneededFiles();
+        return result;
+    }
+
+    private apiDocsParamsInfo(type: FunctionType) {
+        return type.details.parameters.map((parameter) => ({
+            name: parameter.name,
+            defaultValue: parameter.defaultValueExpression
+                ? printExpression(parameter.defaultValueExpression, PrintExpressionFlags.None)
+                : undefined,
+            category:
+                parameter.category === ParameterCategory.Simple
+                    ? 'simple'
+                    : parameter.category === ParameterCategory.VarArgList
+                    ? 'varargList'
+                    : 'varargDict',
+        }));
     }
 
     private _handleMemoryHighUsage() {

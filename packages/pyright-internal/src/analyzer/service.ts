@@ -290,6 +290,10 @@ export class AnalyzerService {
         this._program.reportSymbolsForWorkspace(query, reporter, token);
     }
 
+    getApiDocs(modules: string[], documentationFormat: MarkupKind[]) {
+        return this._program.getApiDocs(modules, documentationFormat);
+    }
+
     getHoverForPosition(
         filePath: string,
         position: Position,
