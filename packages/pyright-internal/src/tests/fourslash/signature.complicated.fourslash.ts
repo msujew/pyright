@@ -39,8 +39,8 @@
 
     const xComplicatedSignatures = [
         {
-            label: 'complicated.A.complicated(a, b, c = 1234, d = None, **kwargs)',
-            parameters: ['a', 'b', 'c = 1234', 'd = None', '**kwargs'],
+            label: 'complicated.A.complicated(a, b, c=1234, d=None, **kwargs)',
+            parameters: ['a', 'b', 'c=1234', 'd=None', '**kwargs'],
         },
     ];
 

@@ -142,7 +142,7 @@ export class SignatureHelpProvider {
                 paramString = '**' + paramString;
             }
             if (param.hasDefault && param.defaultValueExpression) {
-                paramString += ' = ';
+                paramString += '=';
                 paramString += ParseTreeUtils.printExpression(
                     param.defaultValueExpression,
                     ParseTreeUtils.PrintExpressionFlags.ForwardDeclarations
