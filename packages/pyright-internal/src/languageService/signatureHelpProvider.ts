@@ -134,6 +134,7 @@ export class SignatureHelpProvider {
         let label = functionType.details.fullName + '(';
         const params = functionType.details.parameters.filter((p, index) => !(index === 0 && p.name === 'self'));
         params.forEach((param: FunctionParameter, paramIndex) => {
+            const paramName = param.name || '';
             let paramString: string = param.name || '';
             if (param.category === ParameterCategory.VarArgList) {
                 paramString = '*' + paramString;
@@ -152,7 +153,7 @@ export class SignatureHelpProvider {
                 startOffset: label.length,
                 endOffset: label.length + paramString.length,
                 text: paramString,
-                documentation: extractParameterDocumentation(functionDocString || '', paramString),
+                documentation: extractParameterDocumentation(functionDocString || '', paramName),
             });
 
             label += paramString;
