@@ -12,7 +12,18 @@
 ////   [|/*s7*/|]  )
 ////
 //// x = 1234[|/*sNoCall*/|]
-
+////
+//// 'string([|/*sNoCallInString*/|]'.capitalize()
+////
+//// f'format string([|/*sNoCallInFormatString*/|]'.capitalize()
+////
+//// f'format string {int.as_integer_ratio([|/*s8*/|])} '.capitalize()
+////
+//// def foo(f:str): ...
+////
+//// def bar(b:str): ...
+////
+//// bar([|/*nestedString1*/|]foo([|/*nestedString2*/|]))
 {
     const simpleSignatures = [
         {
@@ -55,6 +66,39 @@
         },
         sNoCall: {
             noSig: true,
+        },
+        sNoCallInString: {
+            noSig: true,
+        },
+        sNoCallInFormatString: {
+            noSig: true,
+        },
+        s8: {
+            signatures: [
+                {
+                    label: 'builtins.int.as_integer_ratio()',
+                    parameters: [],
+                },
+            ],
+            activeParameters: [undefined],
+        },
+        nestedString1: {
+            signatures: [
+                {
+                    label: 'simple.bar(b)',
+                    parameters: ['b'],
+                },
+            ],
+            activeParameters: [0],
+        },
+        nestedString2: {
+            signatures: [
+                {
+                    label: 'simple.foo(f)',
+                    parameters: ['f'],
+                },
+            ],
+            activeParameters: [0],
         },
     });
 }
