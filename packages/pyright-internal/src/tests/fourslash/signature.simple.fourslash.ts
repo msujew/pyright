@@ -76,17 +76,17 @@
         s8: {
             signatures: [
                 {
-                    label: '(self: int) -> tuple[int, Literal[1]]',
-                    parameters: ['self: int'],
+                    label: 'builtins.int.as_integer_ratio()',
+                    parameters: [],
                 },
             ],
-            activeParameters: [0],
+            activeParameters: [undefined],
         },
         nestedString1: {
             signatures: [
                 {
-                    label: '(b: str) -> None',
-                    parameters: ['b: str'],
+                    label: 'simple.bar(b)',
+                    parameters: ['b'],
                 },
             ],
             activeParameters: [0],
@@ -94,8 +94,8 @@
         nestedString2: {
             signatures: [
                 {
-                    label: '(f: str) -> None',
-                    parameters: ['f: str'],
+                    label: 'simple.foo(f)',
+                    parameters: ['f'],
                 },
             ],
             activeParameters: [0],
