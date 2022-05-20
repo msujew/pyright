@@ -25,7 +25,7 @@ import { DiagnosticRule } from '../common/diagnosticRules';
 import { convertOffsetsToRange } from '../common/positionUtils';
 import { PythonVersion } from '../common/pythonVersion';
 import { TextRange } from '../common/textRange';
-import { Localizer } from '../localization/localize';
+import { Localizer, optionalAddendum } from '../localization/localize';
 import {
     ArgumentCategory,
     AssignmentNode,
@@ -2311,7 +2311,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 addDiagnostic(
                     AnalyzerNodeInfo.getFileInfo(errorNode).diagnosticRuleSet.reportGeneralTypeIssues,
                     DiagnosticRule.reportGeneralTypeIssues,
-                    Localizer.Diagnostic.typeNotIterable().format({ type: printType(subtype) }) + diag.getString(),
+                    Localizer.Diagnostic.typeNotIterable().format({ type: printType(subtype) }) +
+                        optionalAddendum(diag),
                     errorNode
                 );
             }
@@ -3789,8 +3790,20 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 }
             }
         } else {
+            // Handle the special case of booleans.
+            if (name === 'true' || name === 'false') {
+                const nameSplit = name.split('');
+                nameSplit[0] = nameSplit[0].toUpperCase();
+                const booleanName = nameSplit.join('');
+                addDiagnostic(
+                    fileInfo.diagnosticRuleSet.reportUndefinedVariable,
+                    DiagnosticRule.reportUndefinedVariable,
+                    Localizer.Diagnostic.booleanIsLowerCase().format({ name, booleanName }),
+                    node
+                );
+            }
             // Handle the special case of "reveal_type" and "reveal_locals".
-            if (name !== 'reveal_type' && name !== 'reveal_locals') {
+            else if (name !== 'reveal_type' && name !== 'reveal_locals') {
                 addDiagnostic(
                     fileInfo.diagnosticRuleSet.reportUndefinedVariable,
                     DiagnosticRule.reportUndefinedVariable,
@@ -4588,7 +4601,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                             addDiagnostic(
                                 fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                                 DiagnosticRule.reportGeneralTypeIssues,
-                                Localizer.Diagnostic.moduleUnknownMember().format({ name: memberName }),
+                                Localizer.Diagnostic.moduleUnknownMember().format({
+                                    name: memberName,
+                                    module: baseType.moduleName,
+                                }),
                                 node.memberName
                             );
                         }
@@ -10030,7 +10046,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 addDiagnostic(
                     fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                     DiagnosticRule.reportGeneralTypeIssues,
-                    message + diag.getString(),
+                    message + optionalAddendum(diag),
                     argParam.errorNode
                 );
             }
@@ -10872,7 +10888,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                             operator: ParseTreeUtils.printOperator(node.operator),
                             leftType: printType(leftType),
                             rightType: printType(rightType),
-                        }) + diag.getString(),
+                        }) + optionalAddendum(diag),
                         node
                     );
                 }
@@ -11035,7 +11051,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                         operator: ParseTreeUtils.printOperator(node.operator),
                         leftType: printType(leftType),
                         rightType: printType(rightType),
-                    }) + diag.getString(),
+                    }) + optionalAddendum(diag),
                     node
                 );
             }
@@ -16170,7 +16186,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     addDiagnostic(
                         fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                         DiagnosticRule.reportGeneralTypeIssues,
-                        Localizer.Diagnostic.importSymbolUnknown().format({ name: node.name.value }),
+                        Localizer.Diagnostic.importSymbolUnknown().format({
+                            name: node.name.value,
+                            moduleName: importInfo.importName,
+                        }),
                         node.name
                     );
                 }

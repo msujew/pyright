@@ -1209,8 +1209,13 @@ export class Parser {
         const suite = SuiteNode.create(nextToken);
 
         if (!this._consumeTokenIfType(TokenType.Colon)) {
-            this._addError(Localizer.Diagnostic.expectedColon(), nextToken);
-
+            if (nextToken.type === TokenType.Operator) {
+                if (this._peekOperatorType() === OperatorType.Assign) {
+                    this._addError(Localizer.Diagnostic.expectedEqualityOperator(), nextToken);
+                }
+            } else {
+                this._addError(Localizer.Diagnostic.expectedColon(), nextToken);
+            }
             // Try to perform parse recovery by consuming tokens.
             if (this._consumeTokensUntilType([TokenType.NewLine, TokenType.Colon])) {
                 if (this._peekTokenType() === TokenType.Colon) {

@@ -18,6 +18,9 @@ import ruStrings = require('./package.nls.ru.json');
 import zhCnStrings = require('./package.nls.zh-cn.json');
 import zhTwStrings = require('./package.nls.zh-tw.json');
 
+import enUsSimplified = require('./simplified.nls.en-us.json');
+import { DiagnosticAddendum } from '../common/diagnostic';
+
 export class ParameterizedString<T extends {}> {
     constructor(private _formatString: string) {}
 
@@ -34,17 +37,31 @@ export class ParameterizedString<T extends {}> {
     }
 }
 
+function mergeStrings(a: any, b: any): any {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    const result: any = {};
+    for (const k of keys) {
+        result[k] = {
+            ...a[k],
+            ...b[k],
+        };
+    }
+    return result;
+}
+
+type MessageStyle = 'default' | 'simplified';
+
+let messageStyle: MessageStyle = 'default';
+
+export function setMessageStyle(style: MessageStyle) {
+    messageStyle = style;
+}
+
+export function optionalAddendum(diag: DiagnosticAddendum) {
+    return messageStyle === 'simplified' ? '' : diag.toString();
+}
+
 const defaultLocale = 'en-us';
-const stringMapsByLocale: Map<string, any> = new Map([
-    ['de', deStrings],
-    ['en-us', enUsStrings],
-    ['es', esStrings],
-    ['fr', frStrings],
-    ['ja', jaStrings],
-    ['ru', ruStrings],
-    ['zh-cn', zhCnStrings],
-    ['zh-tw', zhTwStrings],
-]);
 
 type StringLookupMap = { [key: string]: string | StringLookupMap };
 let localizedStrings: StringLookupMap | undefined = undefined;
@@ -166,7 +183,26 @@ function loadStringsForLocale(locale: string): StringLookupMap {
 }
 
 function loadStringsFromJsonFile(locale: string): StringLookupMap | undefined {
-    return stringMapsByLocale.get(locale);
+    switch (locale) {
+        case 'de':
+            return deStrings;
+        case 'en-us':
+            return messageStyle === 'simplified' ? mergeStrings(enUsStrings, enUsSimplified) : enUsStrings;
+        case 'es':
+            return esStrings;
+        case 'fr':
+            return frStrings;
+        case 'ja':
+            return jaStrings;
+        case 'ru':
+            return ruStrings;
+        case 'zh-cn':
+            return zhCnStrings;
+        case 'zh-tw':
+            return zhTwStrings;
+        default:
+            return undefined;
+    }
 }
 
 export namespace Localizer {
@@ -230,6 +266,10 @@ export namespace Localizer {
         export const bindTypeMismatch = () =>
             new ParameterizedString<{ type: string; methodName: string; paramName: string }>(
                 getRawString('Diagnostic.bindTypeMismatch')
+            );
+        export const booleanIsLowerCase = () =>
+            new ParameterizedString<{ name: string; booleanName: string }>(
+                getRawString('Diagnostic.booleanIsLowerCase')
             );
         export const breakOutsideLoop = () => getRawString('Diagnostic.breakOutsideLoop');
         export const callableExtraArgs = () => getRawString('Diagnostic.callableExtraArgs');
@@ -363,6 +403,7 @@ export namespace Localizer {
         export const expectedDecoratorNewline = () => getRawString('Diagnostic.expectedDecoratorNewline');
         export const expectedDelExpr = () => getRawString('Diagnostic.expectedDelExpr');
         export const expectedElse = () => getRawString('Diagnostic.expectedElse');
+        export const expectedEqualityOperator = () => getRawString('Diagnostic.expectedEqualityOperator');
         export const expectedExceptionClass = () => getRawString('Diagnostic.expectedExceptionClass');
         export const expectedExceptionObj = () => getRawString('Diagnostic.expectedExceptionObj');
         export const expectedExpr = () => getRawString('Diagnostic.expectedExpr');
@@ -440,7 +481,9 @@ export namespace Localizer {
         export const importSourceResolveFailure = () =>
             new ParameterizedString<{ importName: string }>(getRawString('Diagnostic.importSourceResolveFailure'));
         export const importSymbolUnknown = () =>
-            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.importSymbolUnknown'));
+            new ParameterizedString<{ name: string; moduleName: string }>(
+                getRawString('Diagnostic.importSymbolUnknown')
+            );
         export const incompatibleMethodOverride = () =>
             new ParameterizedString<{ name: string; className: string }>(
                 getRawString('Diagnostic.incompatibleMethodOverride')
@@ -518,7 +561,7 @@ export namespace Localizer {
         export const moduleAsType = () => getRawString('Diagnostic.moduleAsType');
         export const moduleNotCallable = () => getRawString('Diagnostic.moduleNotCallable');
         export const moduleUnknownMember = () =>
-            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.moduleUnknownMember'));
+            new ParameterizedString<{ name: string; module: string }>(getRawString('Diagnostic.moduleUnknownMember'));
         export const namedExceptAfterCatchAll = () => getRawString('Diagnostic.namedExceptAfterCatchAll');
         export const namedParamAfterParamSpecArgs = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.namedParamAfterParamSpecArgs'));
