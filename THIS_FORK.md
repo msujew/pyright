@@ -78,4 +78,4 @@ We've simplified formatting of function signatures in autocomplete and signature
 
 We spent some time tweaking the error messages that we considered common for our educational scenarios. In almost all cases this was just a message bundle substitution but we did make a few code changes and introduce some new special case messages. The custom messages can be selected via a `diagnosticStyle: "simplified"` initialization option. For the moment the code changes cannot be avoided if you use this branch.
 
-We also commissioned commercial and volunteer translations of this common subset of the error messages (accepting that there would be a long tail).
+We also commissioned commercial and volunteer translations of this common subset of the error messages (accepting that there would be a long tail that remain in English).
