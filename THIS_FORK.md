@@ -7,7 +7,7 @@ There are two branches we're maintaining for the benefit of the [micro:bit Pytho
 -   [browser](https://github.com/microbit-foundation/pyright/tree/browser): this contains [the work to build a Web Worker](https://github.com/microsoft/pyright/compare/main...microbit-foundation:pyright:browser)
 -   [microbit](https://github.com/microbit-foundation/pyright/tree/microbit): this contains the changes from browser and [some additional micro:bit customisations that are unlikey to be of general interest](https://github.com/microbit-foundation/pyright/compare/browser...microbit-foundation:pyright:microbit) - details below
 
-We don't have plans or the resource to maintain these for usecases other than the micro:bit Python Editor, but we're happy to discuss.
+We don't have plans or the resource to maintain these for usecases other than the micro:bit Python Editor, but we're happy to discuss collaboration.
 
 ## A new build for the browser
 
@@ -27,7 +27,7 @@ Like CLI and VS Code packages, browser-pyright depends on the internals package 
 
 The browser package copies the high-level class from the language protocol server and configures it to run in a Web Worker environment.
 
-We've prioritised keeping the fork maintainable by minimising change over clean code.
+We've aimed to keep the fork maintainable by prioritising a small diff over clean code.
 
 ## Changes
 
