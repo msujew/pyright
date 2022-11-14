@@ -4,8 +4,8 @@ This document covers the changes made to Pyright in this repo.
 
 There are two branches we're maintaining for the benefit of the [micro:bit Python Editor](https://python.microbit.org/).
 
--   browser: this contains [the work to build a Web Worker](https://github.com/microsoft/pyright/compare/main...microbit-foundation:pyright:browser)
--   microbit: this contains the changes from browser and [some additional micro:bit customisations that are unlikey to be of general interest](https://github.com/microbit-foundation/pyright/compare/browser...microbit-foundation:pyright:microbit) - details below
+-   [browser](https://github.com/microbit-foundation/pyright/tree/browser): this contains [the work to build a Web Worker](https://github.com/microsoft/pyright/compare/main...microbit-foundation:pyright:browser)
+-   [microbit](https://github.com/microbit-foundation/pyright/tree/microbit): this contains the changes from browser and [some additional micro:bit customisations that are unlikey to be of general interest](https://github.com/microbit-foundation/pyright/compare/browser...microbit-foundation:pyright:microbit) - details below
 
 We don't have plans or the resource to maintain these for usecases other than the micro:bit Python Editor, but we're happy to discuss.
 
