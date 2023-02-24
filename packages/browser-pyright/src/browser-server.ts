@@ -6,6 +6,21 @@
  * Implements pyright language server.
  */
 
+import {
+    CancellationToken,
+    CodeAction,
+    CodeActionKind,
+    CodeActionParams,
+    Command,
+    Connection,
+    CreateFile,
+    DeleteFile,
+    ExecuteCommandParams,
+    InitializeParams,
+    InitializeResult,
+    WorkDoneProgressServerReporter,
+} from 'vscode-languageserver';
+
 import { AnalysisResults } from 'pyright-internal/analyzer/analysis';
 import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
 import { isPythonBinary } from 'pyright-internal/analyzer/pythonPathUtils';
@@ -25,20 +40,6 @@ import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from 'py
 import { CodeActionProvider } from 'pyright-internal/languageService/codeActionProvider';
 import { TestFileSystem } from 'pyright-internal/tests/harness/vfs/filesystem';
 import { WorkspaceMap } from 'pyright-internal/workspaceMap';
-import {
-    CancellationToken,
-    CodeAction,
-    CodeActionKind,
-    CodeActionParams,
-    Command,
-    Connection,
-    CreateFile,
-    DeleteFile,
-    ExecuteCommandParams,
-    InitializeParams,
-    InitializeResult,
-    WorkDoneProgressServerReporter,
-} from 'vscode-languageserver';
 
 const maxAnalysisTimeInForeground = { openFilesTimeInMs: 50, noOpenFilesTimeInMs: 200 };
 
@@ -111,7 +112,7 @@ export class PyrightServer extends LanguageServerBase {
         supportedCommands: string[],
         supportedCodeActions: string[]
     ): InitializeResult {
-        const { files } = params.initializationOptions;
+        const files = params.initializationOptions?.files;
         if (typeof files === 'object') {
             this._initialFiles = files as InitialFiles;
             (this._serverOptions.fileSystem as TestFileSystem).apply(files);
